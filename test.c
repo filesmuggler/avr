@@ -1,3 +1,4 @@
+
 #include <avr/io.h>
 #include <util/delay.h>
 void sleep(uint8_t millisec){
@@ -7,7 +8,7 @@ void sleep(uint8_t millisec){
     }
 }
 
-main(){
+int main(){
     DDRC |=1<<PB7;
     while(1){
         PORTC &= ~(1<<PB7);
@@ -16,4 +17,5 @@ main(){
         PORTC !=(1<<PB7);
         sleep(100);
     }
+    return 0;
 }
