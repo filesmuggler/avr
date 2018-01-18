@@ -7,7 +7,7 @@ unsigned int i, opoznienie, opoznienie2, petla;
 
 void main(void)
 {
-	DDRB=0xFF;
+	DDRB=0xFF; //wszystkie bity z rejestru B na output
 	
 	opoznienie = 1000;
 	opoznienie2 = 100;
@@ -17,7 +17,7 @@ void main(void)
 	{
 		_delay_ms(opoznienie);
 
-		PORTB |=(1<<7);
+		PORTB |=(1<<7);		// zmiana wartosci logicznych
 
 		_delay_ms(opoznienie2);
 
