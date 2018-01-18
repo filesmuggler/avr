@@ -1,21 +1,27 @@
+#define F_CPU 16000000UL
 
 #include <avr/io.h>
-#include <util/delay.h>
-void sleep(uint8_t millisec){
-    while(millisec){
-        _delay_ms(1);
-        millisec--;
-    }
-}
+#include <util/delay.h>	
 
-int main(){
-    DDRC |=1<<PB7;
-    while(1){
-        PORTC &= ~(1<<PB7);
-        sleep(100);
+unsigned int i, opoznienie, opoznienie2, petla;
 
-        PORTC !=(1<<PB7);
-        sleep(100);
-    }
-    return 0;
+void main(void)
+{
+	DDRB=0xFF;
+	
+	opoznienie = 1000;
+	opoznienie2 = 100;
+	petla = 20;
+
+	while(1)
+	{
+		_delay_ms(opoznienie);
+
+		PORTB |=(1<<7);
+
+		_delay_ms(opoznienie2);
+
+		PORTB &=~(1<<7);
+	}
 }
+	
