@@ -40,7 +40,7 @@ void main(void)
             }
     }
     */
-    //DDRA = 0xFF;
+    DDRA = 0xFF;
     DDRB = 0xFF;
     DDRD = 0b01001000;
 
@@ -50,9 +50,9 @@ void main(void)
         {
             opoznienie = 1000 / (2 * czestotliwosc[i]);
             _delay_ms(opoznienie);
-            //PORTA |= (1 << 0);
+            PORTA |= (1 << 0);
             _delay_ms(opoznienie);
-            //PORTA &= ~(1 << 0);
+            PORTA &= ~(1 << 0);
         }
         PORTB |=(1<<7);		// zmiana wartosci logicznych
         _delay_ms(1000);
