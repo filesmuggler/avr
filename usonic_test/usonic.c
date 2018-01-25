@@ -5,63 +5,125 @@
 #include <avr/interrupt.h>
 #include <stdlib.h>
 
+// piny użyte w projekcie
 #define Red_diode PINB7
 #define Buzzer_pin PINA0
 #define Trigger_pin1 PIND1
 #define Trigger_pin2 PIND4
 
-unsigned latency;
-int frequency;
-static volatile int pulse = 0; //interger  to access all though the program
-static volatile int i = 0;     // interger  to access all though the program
+// opóźnienie
+unsigned opoznienie;
+// częstotliwość dzwieku
+int czestotliwosc;
+// czy działa
+unsigned char working;
+// do narastającego zbocza
+unsigned char rising_edge;
+// wartość timera
+uint16_t timer_value;
+//dystans w cm
+int distance_cm;
+// error
+uint8_t error;
 
-void main(void)
+// funkcja właczenia czujnika
+void Send_signal(void);
+// włączenie przerwan
+void Initialize_external_interrupt (void);
+// włączenie timera
+void Initialize_timer0 (void);
+
+
+ISR (TIMER0_OVF_vect)
 {
-    latency = 200;
-    frequency = 440;
+	if(rising_edge==1) //Sprawdza czy jest echo
+	{
+		timer_value++;
+		/* Sprawdza czy nie jest poza zasiegiem */
+		if(timer_value > 91)
+		{
+			working = 0;
+			rising_edge = 0;
+			error = 1;
+		}
+	}
+}
+ISR (INT1_vect)
+{
+	if(working==1) //Sprawdza czy echo jest wysokie, włączanie timera
+	{
+		if(rising_edge==0)
+		{
+			rising_edge=1;
+			TCNT0 = 0;
+			timer_value = 0;
+		}
+		else //Sprawdza czy echo jest już niskie, wyłączenie timera
+		{
+			rising_edge = 0;
+			distance_cm = (timer_value*256 + TCNT0)/58;
+			working = 0;			
+		}
+	}
+}
 
-    DDRB = 0b10000000;
-    DDRD = 0b01001000;
-    PORTD = 0xFF;
+int main(void)
+{
+	/* Włączenie przerwań */
+	Initialize_external_interrupt();
+	Initialize_timer0();
+    
+    // inicjalizacja pinów
+    DDRA = 0xFF;
+	DDRB = 0xFF;
+	DDRD &=~ (1 << PIND3);
+	DDRD |= (1 << PIND4);
 
-    GICR |= (1 << INT0);   //enabling interrupt at interrupt0
-    MCUCR |= (1 << ISC00); //setting interrupt triggering logic change
+    // zadana częstotiwość
+    czestotliwosc = 22.5;
 
-    TCCR1A = 0;
+    // włączenie przerwań
+	sei();
 
-    int16_t countA = 0; // storing digital output
-
-    sei(); /* enable global interrupts */
-
-    while (1)
-    {
-        PORTD |= (1 << Trigger_pin1);
-        _delay_us(10);
-        PORTD &= ~(1 << Trigger_pin1);
-
-        countA = pulse / 58;
-
-        if (countA>0)
-        {
-            PORTB |= (1 << Red_diode); // zmiana wartosci logicznych
-            _delay_ms(latency);
-            PORTB &= ~(1 << Red_diode);
+    // pętla główna
+    while(1)
+	{		
+		Send_signal(); 
+        if(distance_cm < 10){
+            opoznienie = 1000 / (2 * 22.5);
+            PORTB |= (1 << 7);
+            PORTA |= (1 << 0);
+            _delay_ms(opoznienie);
+            PORTB &= ~(1 << 7);
+            PORTA &=~(1<<0);
         }
     }
 }
 
- ISR(INT0_vect)
-        {
-            if (i == 1)
-            {
-                TCCR1B = 0;    //disabling counter
-                pulse = TCNT1; //count memory is updated to integer
-                TCNT1 = 0;     //resetting the counter memory
-                i = 0;
-            }
-            if (i == 0)
-            {
-                TCCR1B |= (1 << CS10);
-                i = 1;
-            }
-        }
+void Send_signal()
+{
+	if(working ==0) //Sprawdza czy pomiar zostal na pewno dokonany
+	{
+	_delay_ms(50);		//Restartuje czujnik
+	PORTD &=~ (1 << PIND4);
+	_delay_us(1);
+	PORTD |= (1 << PIND4); //Wysyła 50 us sygnał by załączyć wysyłanie sygnału
+	_delay_us(10);
+	PORTD &=~ (1 << PIND4);
+	working = 1;	// Sygnalizacja ze jest gotowy
+	error = 0;		// żadnych błędów
+	}	
+}
+
+void Initialize_external_interrupt()
+{
+	MCUCR |= (1 << ISC10); //Sprawdza logiczne zmiany stanów na INT1
+	GICR |= (1 << INT1); //włącza INT1
+}
+
+void Initialize_timer0()
+{
+	TCCR0 |= (1 << CS00); //nie ma skalowania timera
+	TCNT0 = 0;			//Reset timera
+	TIMSK |= (1 << TOIE0); //włączenie przeładowania timera
+}
